@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Login - Calculadora de Surebet</title>
+<style>
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+/* Fundo e layout centralizado */
+body {
+    background: linear-gradient(135deg, #0f1115, #161a20);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #fff;
+}
+
+.login-container {
+    background: #20242c;
+    padding: 40px 30px;
+    border-radius: 16px;
+    width: 350px;
+    box-shadow: 0 0 20px rgba(0,255,0,0.2);
+    text-align: center;
+    transition: 0.3s;
+}
+
+.login-container:hover {
+    box-shadow: 0 0 30px rgba(0,255,0,0.4);
+}
+
+.login-container h1 {
+    color: greenyellow;
+    margin-bottom: 25px;
+    font-size: 28px;
+}
+
+.login-container input {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: none;
+    background: #161a20;
+    color: #fff;
+    font-size: 16px;
+}
+
+.login-container input:focus {
+    outline: 2px solid greenyellow;
+}
+
+.login-container button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    border: none;
+    border-radius: 8px;
+    background: greenyellow;
+    color: #000;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 16px;
+    transition: 0.2s;
+}
+
+.login-container button:hover {
+    background: #b0ff5f;
+}
+
+#error {
+    color: #ff5c5c;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+/* Pequeno texto para versão mobile */
+@media(max-width:400px){
+    .login-container {
+        width: 90%;
+        padding: 30px 20px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="login-container">
+    <h1>Login</h1>
+    <input type="text" id="usuario" placeholder="Usuário">
+    <input type="password" id="senha" placeholder="Senha">
+    <button onclick="login()">Entrar</button>
+    <div id="error"></div>
+</div>
+
+<script>
+function login(){
+    const usuario = document.getElementById("usuario").value.trim();
+    const senha = document.getElementById("senha").value.trim();
+    const errorDiv = document.getElementById("error");
+
+    if(!usuario || !senha){
+        errorDiv.innerText = "Por favor, preencha todos os campos!";
+        return;
+    }
+
+    fetch("http://localhost:3000/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ usuario, senha })
+    })
+    .then(r => {
+        if(!r.ok) throw new Error("Login inválido");
+        return r.json();
+    })
+    .then(user => {
+        localStorage.setItem("user", JSON.stringify(user));
+        location.href = "calculadora.html";
+    })
+    .catch(err => {
+        errorDiv.innerText = "Usuário ou senha incorretos!";
+    });
+}
+</script>
+
+</body>
+</html>

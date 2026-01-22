@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Histórico de Apostas</title>
+<style>
+body{
+    background:#0f1115;
+    color:#fff;
+    font-family:Arial, sans-serif;
+    padding:20px;
+}
+h2{color:greenyellow; margin-bottom:10px;}
+#filtros{
+    margin-bottom:20px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+}
+input, button{
+    padding:6px 10px;
+    border-radius:6px;
+    border:none;
+    font-size:14px;
+}
+button{cursor:pointer;}
+.card{
+    background:#161a20;
+    padding:15px;
+    border-radius:12px;
+    margin-bottom:15px;
+}
+.card h3{
+    margin:0 0 10px 0;
+    color:greenyellow;
+}
+.card pre{
+    background:#20242c;
+    padding:10px;
+    border-radius:8px;
+    white-space:pre-wrap;
+    color:#fff;
+}
+.infos{
+    display:flex;
+    gap:15px;
+    margin-top:10px;
+    flex-wrap:wrap;
+}
+.acoes{
+    margin-top:10px;
+}
+#lucroTotal{
+    background:#161a20;
+    padding:10px 15px;
+    border-radius:12px;
+    margin-bottom:20px;
+    font-weight:bold;
+    color:#4cff4c;
+    font-size:16px;
+}
+</style>
+</head>
+<body>
+
+<h2>📊 Histórico de Apostas</h2>
+
+<div id="filtros">
+    <input id="filtroJogo" placeholder="Filtrar por jogo">
+    <input type="date" id="filtroData">
+    <button onclick="logout()">Sair</button>
+</div>
+
+<div id="lucroTotal">Lucro Total: R$ 0,00</div>
+
+<div id="container"></div>
+
+<script>
+const user = JSON.parse(localStorage.getItem("user"));
+if (!user) location.href = "login.html";
+
+const filtroJogo = document.getElementById("filtroJogo");
+const filtroData = document.getElementById("filtroData");
+const container = document.getElementById("container");
+const lucroTotalDiv = document.getElementById("lucroTotal");
+
+let todasApostas = []; // Guardar todas apostas
+
+// Carrega todas apostas do usuário
+function carregar() {
+    fetch(`http://localhost:3000/apostas/${user.id}`)
+        .then(r => r.json())
+        .then(dados => {
+            todasApostas = dados;
+            render(todasApostas);
+            atualizarLucroTotal();
+        });
+}
+
+// Renderiza as apostas de acordo com filtros
+function render(apostas) {
+    const jogoFiltro = filtroJogo.value.toLowerCase();
+    const dataFiltro = filtroData.value;
+
+    container.innerHTML = "";
+
+    apostas
+        .filter(a =>
+            (!jogoFiltro || a.jogo.toLowerCase().includes(jogoFiltro)) &&
+            (!dataFiltro || a.data.startsWith(dataFiltro))
+        )
+        .forEach(a => {
+            const div = document.createElement("div");
+            div.className = "card";
+            div.innerHTML = `
+                <h3>${a.jogo} - ${new Date(a.data).toLocaleString()}</h3>
+                <pre>${a.resumo}</pre>
+                <div class="infos">
+                    <span>Investimento: ${a.investimento}</span>
+                    <span>Lucro: ${a.lucro}</span>
+                    <span>ROI: ${a.roi}</span>
+                </div>
+                <div class="acoes">
+                    <button onclick="apagar(${a.id})">🗑️ Apagar</button>
+                </div>
+            `;
+            container.appendChild(div);
+        });
+}
+
+// Atualiza o lucro total de todas apostas
+function atualizarLucroTotal() {
+    let totalLucro = 0;
+    todasApostas.forEach(a => {
+        // Remove R$, pontos e transforma vírgula em ponto
+        totalLucro += parseFloat(a.lucro.replace("R$","").replace(/\./g,"").replace(",",".") || 0);
+    });
+    lucroTotalDiv.innerText = `Lucro Total: R$ ${totalLucro.toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+}
+
+// Apagar aposta
+function apagar(id) {
+    fetch(`http://localhost:3000/apagar/${id}`, { method: "DELETE" })
+        .then(() => carregar());
+}
+
+// Logout
+function logout() {
+    localStorage.removeItem("user");
+    location.href = "login.html";
+}
+
+// Filtros
+filtroJogo.oninput = () => render(todasApostas);
+filtroData.onchange = () => render(todasApostas);
+
+// Inicializa
+carregar();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>🧮 Calculadora de Surebet</title>
+<style>
+body{
+    background:#0f1115;
+    font-family:Arial, sans-serif;
+    color:#fff;
+    padding:30px;
+}
+.wrapper{
+    display:grid;
+    grid-template-columns:2fr 1.3fr;
+    gap:20px;
+}
+.container{
+    background:#161a20;
+    border-radius:14px;
+    padding:20px;
+}
+h1,h2{color:greenyellow;}
+input,select,textarea{width:100%; background:#20242c; border:none; border-radius:8px; padding:8px; color:#fff;}
+.campo-jogo{
+    margin-bottom:20px;
+    display:flex;
+    flex-direction:column;
+}
+.campo-jogo label{
+    margin-bottom:5px;
+    font-weight:bold;
+    font-size:14px;
+    color:#4cff4c;
+}
+.linha{
+    display:grid;
+    grid-template-columns:
+        1.3fr
+        1.1fr
+        0.7fr
+        0.7fr
+        0.9fr
+        0.9fr
+        1.2fr
+        40px;
+    gap:12px;
+    margin-bottom:12px;
+}
+.linha select, .linha input{
+    display:block;
+}
+.linha .mercado,
+.linha .odd,
+.linha .aumento,
+.linha .tipo {
+    margin-left:4px;
+}
+.lucro-linha{
+    background:#20242c;
+    border-radius:8px;
+    padding:8px;
+    text-align:center;
+    font-weight:bold;
+    color:#4cff4c;
+    font-size:13px;
+}
+.freebet-check{
+    display:inline-flex;
+    align-items:center;
+    padding:10px 15px;
+    background:#20242c;
+    border-radius:8px;
+    margin:10px 0 15px 0;
+}
+button{
+    background:greenyellow;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+    padding:8px;
+}
+.remove{background:#ff5c5c}
+.add{margin-top:15px}
+.resultado{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    margin-top:15px;
+}
+.box{
+    background:#20242c;
+    padding:10px;
+    border-radius:8px;
+    text-align:center;
+}
+textarea{
+    height:380px;
+    resize:none;
+}
+.copy{margin-top:10px;width:100%;}
+
+.responsabilidade-container{
+    margin-top:4px;
+    font-size:13px;
+    color:#ffb84c;
+    font-weight:bold;
+    display:none;
+}
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+<div class="container">
+<h1>CALCULADORA DE SUREBET</h1>
+
+<div class="campo-jogo">
+    <label for="jogo">⚽ Jogo</label>
+    <input id="jogo" class="campo-jogo" placeholder="Digite o jogo">
+</div>
+
+<div class="campo-jogo">
+    <label for="dataJogo">📅 Data do Jogo</label>
+    <input type="date" id="dataJogo" class="campo-jogo">
+</div>
+
+<div class="campo-jogo">
+    <label for="novaCasa">🏠 Adicionar Nova Casa</label>
+    <input type="text" id="novaCasa" placeholder="Digite o nome da casa">
+    <button type="button" onclick="adicionarCasa()">➕ Adicionar Casa</button>
+</div>
+
+<div id="linhas"></div>
+
+<button class="add" onclick="addLinha()">➕ Adicionar Proteção</button>
+
+<div class="resultado">
+    <div class="box">💲 INVESTIMENTO<br><b id="inv">R$ 0,00</b></div>
+    <div class="box">💱 LUCRO<br><b id="lucro">R$ 0,00</b></div>
+    <div class="box">💹 ROI<br><b id="roi">0%</b></div>
+</div>
+</div>
+
+<div class="container">
+<h2>📜 RESUMO DA APOSTA</h2>
+<textarea id="resumo"></textarea>
+<button class="copy" onclick="copiarResumo()">📋 COPIAR</button>
+<button onclick="salvarAposta()">💾 SALVAR APOSTA</button>
+</div>
+
+</div>
+
+<script>
+function n(v){ return !v?0:parseFloat(v.replace(/\./g,'').replace(',','.')) || 0; }
+function m(v){ return v.toLocaleString('pt-BR',{minimumFractionDigits:2}); }
+
+function carregarCasas(){ return JSON.parse(localStorage.getItem("casas")) || ["Bet365","SportingBet","Pinnacle"]; }
+
+function atualizarSelectsCasas(){ 
+    const casas = carregarCasas();
+    document.querySelectorAll(".linha .casa").forEach(select=>{
+        const valorAtual = select.value;
+        select.innerHTML = casas.map(c=>`<option value="${c}">${c}</option>`).join("");
+        if(casas.includes(valorAtual)) select.value = valorAtual;
+    });
+}
+
+function adicionarCasa(){
+    const nova = document.getElementById("novaCasa").value.trim();
+    if(!nova) return alert("Digite o nome da casa!");
+    let casas = carregarCasas();
+    if(casas.includes(nova)) return alert("Casa já existe!");
+    casas.push(nova);
+    localStorage.setItem("casas", JSON.stringify(casas));
+    document.getElementById("novaCasa").value = "";
+    atualizarSelectsCasas();
+}
+
+function addLinha(principal=false){
+    const wrap=document.getElementById("linhas");
+    const l=document.createElement("div");
+    l.className="linha";
+    const casas = carregarCasas();
+    let options = casas.map(c=>`<option value="${c}">${c}</option>`).join("");
+
+    l.innerHTML=`
+        <select class="casa">${options}</select>
+        <input class="mercado" placeholder="Mercado">
+        <input class="odd" type="number" step="0.01" placeholder="Odd">
+        <input class="aumento" type="number" step="0.01" placeholder="% Aumento">
+        <select class="tipo">
+            <option>Back</option>
+            <option>Lay</option>
+        </select>
+        <input class="com" type="number" step="0.01" placeholder="% Comissão">
+        <input class="valor" placeholder="0,00" ${principal?"":"readonly"}>
+        <div class="responsabilidade-container">💥 Responsabilidade: <span class="responsabilidade">0,00</span></div>
+        <div class="lucro-linha">R$ 0,00</div>
+        ${principal?"":`<button class="remove" onclick="this.parentElement.remove();calc()">X</button>`}
+    `;
+
+    const tipoSelect = l.querySelector(".tipo");
+    const respContainer = l.querySelector(".responsabilidade-container");
+    tipoSelect.addEventListener("change", ()=>{
+        respContainer.style.display = tipoSelect.value === "Lay" ? "block" : "none";
+        calc();
+    });
+
+    l.querySelectorAll("input,select").forEach(e=>{
+        e.addEventListener("input",calc);
+        e.addEventListener("change",calc);
+    });
+
+    wrap.appendChild(l);
+
+    if(principal){
+        const fb=document.createElement("div");
+        fb.className="freebet-check";
+        fb.innerHTML=`<input type="checkbox" id="freebet"> 🎯 Freebet`;
+        fb.querySelector("input").addEventListener("change",calc);
+        wrap.appendChild(fb);
+    }
+}
+
+//calculossssssssss
+function calc(){
+    const linhas=document.querySelectorAll(".linha");
+    if(linhas.length<2) return;
+
+    const base=linhas[0];
+    const stakeBase=n(base.querySelector(".valor").value);
+    let oddBase=parseFloat(base.querySelector(".odd").value);
+    const aumentoBase=n(base.querySelector(".aumento").value)/100;
+    oddBase = oddBase + (oddBase-1)*aumentoBase;
+    const tipoBase=base.querySelector(".tipo").value;
+    const comBase=(parseFloat(base.querySelector(".com").value)||0)/100;
+    if(!stakeBase||!oddBase) return;
+
+    const free=document.getElementById("freebet")?.checked || false;
+
+    let retornoAlvo = tipoBase==="Back"
+        ? free ? stakeBase*(oddBase-1)*(1-comBase)
+               : stakeBase*(1+(oddBase-1)*(1-comBase))
+        : stakeBase*(oddBase-1)*(1-comBase);
+
+    let investimento = free ? 0 : stakeBase;
+
+    linhas.forEach((l,i)=>{
+        if(i===0) return;
+
+        const tipo=l.querySelector(".tipo").value;
+        const com=(parseFloat(l.querySelector(".com").value)||0)/100;
+        let odd = parseFloat(l.querySelector(".odd").value);
+        const aumento=n(l.querySelector(".aumento").value)/100;
+        odd = odd + (odd-1)*aumento;
+        if(!odd) return;
+
+        if(tipo==="Back"){
+            const stake = retornoAlvo / (1+(odd-1)*(1-com));
+            investimento += stake;
+            l.querySelector(".valor").value = m(stake);
+            l.querySelector(".responsabilidade-container").style.display="none";
+        } else {
+            //calculo resp 
+            const stakeLay = retornoAlvo / (odd - com);
+            const liability = stakeLay * (odd - 1)
+            investimento += liability;
+            l.querySelector(".valor").value = m(stakeLay);
+            l.querySelector(".responsabilidade").innerText = m(liability);
+            l.querySelector(".responsabilidade-container").style.display="block";
+
+            
+        }
+    });
+
+    const lucro = retornoAlvo - investimento;
+
+    document.getElementById("inv").innerText="R$ "+m(investimento);
+    document.getElementById("lucro").innerText="R$ "+m(lucro);
+    document.getElementById("roi").innerText=
+        investimento>0?((lucro/investimento)*100).toFixed(2)+"%":"0%";
+
+    document.querySelectorAll(".lucro-linha")
+        .forEach(el=>el.innerText="R$ "+m(lucro));
+
+    gerarResumo();
+}
+
+function gerarResumo(){
+    let t=`⚽ Jogo: ${document.getElementById("jogo").value}\n`;
+    t+=`📅 Data: ${document.getElementById("dataJogo").value}\n\n`;
+    document.querySelectorAll(".linha").forEach((l,i)=>{
+        const odd = parseFloat(l.querySelector(".odd").value);
+        const aumento = n(l.querySelector(".aumento").value)/100;
+        const oddCalc = odd + (odd-1)*aumento;
+        t+=`🎰 APOSTA ${i+1}:\n`;
+        t+=`🏠 Casa: ${l.querySelector(".casa").value}\n`;
+        t+=`🎯 Mercado: ${l.querySelector(".mercado").value}\n`;
+        t+=`📊 Odd: ${odd} (+${(aumento*100).toFixed(2)}%) = ${oddCalc.toFixed(3)}\n`;
+        t+=`💲 Valor: R$ ${l.querySelector(".valor").value} (${l.querySelector(".tipo").value})\n`;
+        if(l.querySelector(".tipo").value==="Lay"){
+            t+=`💥 Responsabilidade: R$ ${l.querySelector(".responsabilidade").innerText}\n`;
+        }
+        t+=`🤑 Lucro: ${l.querySelector(".lucro-linha").innerText}\n\n`;
+    });
+    document.getElementById("resumo").value=t;
+}
+
+function copiarResumo(){ navigator.clipboard.writeText(document.getElementById("resumo").value); }
+
+function salvarAposta(){
+    const user = JSON.parse(localStorage.getItem("user"));
+    if(!user) return alert("❌ Faça login antes de salvar!");
+    const dataEscolhida = document.getElementById("dataJogo").value || new Date().toISOString();
+    fetch("http://localhost:3000/salvar", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            userId: user.id,
+            jogo: document.getElementById("jogo").value,
+            resumo: document.getElementById("resumo").value,
+            investimento: document.getElementById("inv").innerText,
+            lucro: document.getElementById("lucro").innerText,
+            roi: document.getElementById("roi").innerText,
+            data: dataEscolhida
+        })
+    })
+    .then(r=>r.json())
+    .then(()=>alert("✅ Aposta salva com sucesso"))
+    .catch(()=>alert("❌ Erro ao salvar aposta"));
+}
+
+
+addLinha(true);
+addLinha();
+
+///const user = JSON.parse(localStorage.getItem("user"));
+///if(!user) location.href="login.html";///
+</script>
+</body>
+</html>
